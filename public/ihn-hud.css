@@ -1,0 +1,22 @@
+.ihn-logo {
+  position: fixed;
+  top: 24px;
+  left: 32px;
+  font-family: 'Ubuntu', Arial, sans-serif;
+  font-size: 2.2rem;
+  color: #222;
+  z-index: 1000;
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: 0.05em;
+  font-weight: bold;
+  text-shadow: 0 2px 8px #fff8, 0 1px 1px #0002;
+  transition: opacity 0.4s;
+}
+@media (max-width: 600px) {
+  .ihn-logo {
+    font-size: 1.2rem;
+    top: 12px;
+    left: 12px;
+  }
+}

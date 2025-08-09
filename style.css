@@ -1,0 +1,55 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    overflow: hidden; /* Evita el scroll durante la carga */
+    font-family: sans-serif;
+}
+
+.webgl {
+    position: fixed;
+    top: 0;
+    left: 0;
+    outline: none;
+    /* El canvas empieza invisible para evitar parpadeos */
+    opacity: 1; 
+    transition: opacity 1.5s ease; /* Para la futura transición */
+    z-index: 1;
+}
+
+.loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: #000000;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    /* Transición para desaparecer suavemente */
+    opacity: 1;
+    transition: opacity 1.5s ease;
+/*}
+
+/* Clase que añadiremos con JS para ocultar el loader */
+/*.loader--hidden {*/
+    opacity: 0;
+    pointer-events: none; /* Evita que intercepte clics cuando esté oculto */
+}
+
+.html-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    color: white;
+    z-index: 2; /* <-- Añade esto para ponerlo en la capa 2 (por encima del canvas) */
+}
