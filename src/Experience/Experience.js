@@ -23,31 +23,39 @@ export default class Experience {
         window.experienceDebug = this;
         this.htmlContainer = document.querySelector('.html-container');
 
-        // Setup
+
+        // --- CONFIGURACIÓN INICIAL ---
+        // Creamos los componentes base que no dependen de los assets.
         this.sizes = new Sizes();
         this.time = new Time();
         this.scene = new THREE.Scene();
-        this.theme = new Theme ();
-        this.resources = new Resources(assets);
         this.camera = new Camera(this);
-        // Creamos el Mundo PRIMERO, ya que otros sistemas dependen de él
-        this.world = new World(this, this.htmlManager);
-        // Creamos los Gestores que dependen del Mundo
-        this.htmlManager = new HTMLManager(this, this.htmlContainer);
-        this.letterManager = new LetterManager(this);
-        this.screenManager = new ScreenManager(this, states);
-        // Creamos los Sistemas de Control
+        this.theme = new Theme();
         this.renderer = new Renderer(this); 
         this.inputManager = new InputManager();
-        this.animationDirector = new AnimationDirector(this.world.worldGroup, states);
-        this.stateManager = new StateManager(this);
+        this.htmlManager = new HTMLManager(this, this.htmlContainer);
         
+        // Creamos el gestor de recursos e iniciamos la carga
+        this.resources = new Resources(assets);
 
-        this.mouse = new THREE.Vector2();// CREA UNA PROPIEDAD PARA GUARDAR LA POSICIÓN DEL MOUSE
+        // --- ESPERAMOS A QUE TODO ESTÉ LISTO ---
+        this.resources.on('ready', () => {
+            console.log("Experience: Recursos listos. Construyendo el mundo y los gestores.");
 
-        this.animationDirector.connect(); // Conectamos el embrague al inicio
-        this.screenManager.showScreen('logo');// Ahora que todos los sistemas están listos, mostramos la pantalla inicial.
-        
+            // --- CREACIÓN POST-CARGA ---
+            // Ahora que los assets están disponibles, creamos los componentes que dependen de ellos.
+            this.world = new World(this, this.htmlManager);
+            this.world.onResourcesReady();
+            this.letterManager = new LetterManager(this);
+            this.screenManager = new ScreenManager(this, states);
+            this.animationDirector = new AnimationDirector(this.world.worldGroup, states);
+            this.stateManager = new StateManager(this);
+            this.mouse = new THREE.Vector2();
+            // --- 4. INICIAMOS LA EXPERIENCIA ---
+            this.stateManager.startIntro();
+            //this.animationDirector.connect(); // Conectamos el embrague al inicio
+
+        });
         // AÑADE UN EVENT LISTENER PARA 'mousemove'
         window.addEventListener('mousemove', (event) => {
             // Normalizamos las coordenadas del mouse (de -1 a +1)
@@ -84,9 +92,17 @@ export default class Experience {
         if (this.world && this.world.brain && this.world.brain.face) {
             this.world.brain.face.lookAt(this.mouse);
         }
-        this.camera.update();
-        this.world.update();
-        this.htmlManager.update();
-        this.renderer.update(); // Dibuja la escena en cada frame
+        if(this.camera){
+            this.camera.update();
+        }
+        if (this.world){
+            this.world.update();
+        }
+        if (this.htmlManager) {
+            this.htmlManager.update();
+        }
+        if (this.renderer) {
+            this.renderer.update(); // Dibuja la escena en cada frame
+        }
     }
 }

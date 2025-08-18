@@ -15,21 +15,12 @@ export default class World {
 
     this.worldGroup = new THREE.Group();
     this.scene.add(this.worldGroup);
-
-    // Esperar a que los recursos estén listos
-    if (this.resources && this.resources.on) {
-      this.resources.on("ready", () => {
-        console.log("World.js: Los recursos están listos.");
-        this.setLights();
-        this.setLogo();
-        this.setBrain();
-      });
-    } else {
-      // Si no hay sistema de recursos, crea el cubo y luces de inmediato
-      this.setLights();
-      this.setLogo();
-      this.setBrain();
-    }
+   
+  }
+  onResourcesReady() {
+    this.setLights();
+    this.setLogo();
+    this.setBrain();
   }
   setLogo() {
     this.logo = new Logo(this);
@@ -61,9 +52,12 @@ export default class World {
     this.worldGroup.add(this.brain.brainGroup);
     this.worldGroup.add(this.brainGrid.container3d); // El contenedor ahora tiene las líneas
 
+    this.brain.brainGroup.visible = false; // Aseguramos que el cerebro sea visible
+    this.brainGrid.container3d.visible = false; // Aseguramos que el
+
     // Activamos la animación de las líneas
-    this.synapseSystem.activateLines(true);
-    this.synapseSystem.startTimer();
+    //this.synapseSystem.activateLines(true);
+    //this.synapseSystem.startTimer();
   }
 
   update() {
