@@ -45,12 +45,12 @@ export default class IntroController {
             // Después de que el logo aparece, mostramos el texto
             // El '1' al final indica que esta animación empieza 1 segundo después del inicio de la timeline
             tl.call(() => {
-
-                /*   gsap.to(this.logo.logoGroup.rotation, {
-                    z: (Math.PI / 2) / 4,
+/* 
+                   gsap.to(this.logo.logoGroup.rotation, {
+                    y: Math.PI,
                     duration: 1,
                     ease: 'power3.out'
-                });  */
+                }); */
                 /* this.letterManager.showText({
                     text: 'INTUITIVE HUMAN\nNEUROTHERAPY',
                     fontSize: 8, // Ajustamos el tamaño para que coincida con el logo
