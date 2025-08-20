@@ -10,8 +10,11 @@ export default class LetterManager {
         this.theme = this.experience.theme;
         
         this.letterPool = [];
+        this.activeTexts = new Map(); // Usamos un Map para gestionar textos por ID
         this.activeLetters = [];
         this.maxLetters = 100; // Cantidad máxima de letras que podemos mostrar a la vez
+        this.nextAvailableLetterIndex = 0; // Puntero a la siguiente letra libre
+
 
         this.preloadLetters();
     }
@@ -23,8 +26,8 @@ export default class LetterManager {
             letter.anchorX = 'center';
             letter.anchorY = 'middle';
             letter.material.transparent = false; // Permite animar la opacidad
-            letter.scale.set (0,0,0);
-            letter.visible = false;
+            letter.scale.set (1,1,1);
+            letter.visible = true;
             
             this.letterPool.push(letter);
             this.worldGroup.add(letter);
@@ -34,77 +37,108 @@ export default class LetterManager {
 
     // en src/Experience/Utils/LetterManager.js
 
-showText(config) {
-    this.hideText().then(() => {
-        const text = config.text.replace(/\n/g, ' ');
+    showText(config) {
+        // 1. CONFIRMAMOS QUE LA LLAMADA Y LA CONFIGURACIÓN LLEGAN BIEN
+        console.log("--- [LetterManager] Iniciando showText ---", config);
+
+        // Extraemos las propiedades con valores por defecto
+        const {
+            id = 'default',
+            text = '',
+            fontSize = 1,
+            font = '/fonts/ubuntuBold.ttf', // Asegúrate que esta ruta es correcta
+            color = this.theme.liveColors.line,
+            position = new THREE.Vector3(0, 0, 0)
+        } = config;
+
+        // Si ya existe un texto con este ID, lo ocultamos primero
+        /* if (this.activeTexts.has(id)) {
+            this.hideText({ id });
+        } */
+
         const lettersToShow = text.split('');
-        const kerning = (config.fontSize || 1) * 0.8;
+        const kerning = fontSize * 0.8;
         const totalWidth = lettersToShow.reduce((width, char) => width + (char === ' ' ? kerning * 0.5 : kerning), 0);
-        let currentX = -totalWidth / 2;
+        let currentX = position.x - totalWidth / 2;
+        const lettersForThisBlock = [];
+
+        console.log(`[${id}] -> Mostrando texto: "${text}"`); // 2. VERIFICAMOS EL TEXTO A PROCESAR
 
         for (let i = 0; i < lettersToShow.length; i++) {
-            if (i >= this.letterPool.length) break;
             const char = lettersToShow[i];
             if (char === ' ') {
                 currentX += kerning * 0.5;
                 continue;
             }
+
+            if (this.nextAvailableLetterIndex >= this.letterPool.length) {
+                console.warn("LetterManager: No hay más letras pre-cargadas.");
+                break;
+            }
             
-            const letter = this.letterPool[i];
-            
-            // --- LÓGICA CORREGIDA ---
-            // 1. CONFIGURAMOS COMPLETAMENTE LA LETRA
+            const letter = this.letterPool[this.nextAvailableLetterIndex];
+            this.nextAvailableLetterIndex++;
+
+            // 3. VERIFICAMOS QUE ESTAMOS CONFIGURANDO LA LETRA
+            console.log(`[${id} - ${char}] -> Configurando letra #${i} del pool.`);
+
             letter.text = char;
-            letter.fontSize = config.fontSize || 1;
-            letter.color = this.theme.liveColors.line;
-            letter.font = '/fonts/ubuntuBold.ttf';
+            letter.fontSize = fontSize;
+            letter.color = color;
+            letter.font = font;
+            letter.position.set(currentX, position.y, position.z);
             
-            // 2. LA COLOCAMOS EN SU POSICIÓN FINAL (SIN ANIMACIÓN)
-            letter.position.set(
-                config.position.x + currentX,
-                config.position.y,
-                config.position.z
-            );
-            
-            // 3. SINCRONIZAMOS PARA QUE TROIKA LA CONSTRUYA
+            // 4. EL PUNTO MÁS CRÍTICO: El callback de .sync()
+            console.log(`[${id} - ${char}] -> Llamando a .sync()`);
             letter.sync(() => {
-                // 4. UNA VEZ SINCRONIZADA, LA HACEMOS VISIBLE Y LA ANIMAMOS
+                // SI NO VES ESTE MENSAJE EN LA CONSOLA, EL PROBLEMA ESTÁ EN LA CARGA DE LA FUENTE
+                console.log(`%c[${id} - ${char}] -> ¡CALLBACK DE SYNC EJECUTADO!`, 'color: lightgreen; font-weight: bold;');
+
                 letter.visible = true;
-                gsap.to(letter.scale, {
-                    x: 1, y: 1, z: 1,
+                gsap.from(letter.position, {
+                    y: letter.position.y - 3, z: 0,
                     duration: 1.0,
-                    ease: 'elastic.out(1, 0.5)',
+                    ease: 'back.out(3)',
                     delay: i * 0.05
                 });
             });
 
-            this.activeLetters.push(letter);
+            lettersForThisBlock.push(letter);
             currentX += kerning;
         }
-    });
-}
 
-    hideText() {
-        return new Promise ((resolve) => {
-            if (this.activeLetters.length === 0) {
-                resolve();
-                return;
-            }
-            const tl = gsap.timeline({ onComplete: resolve });
-            this.activeLetters.forEach((letter, i) => {
-                tl.to(letter.scale, {
-                    x:0,
-                    y:0,
-                    z:0,
-                    duration:0.5,
-                    ease: 'power3.in',
-                    onComplete: () => {
-                        letter.visible = false;
-                        letter.text = '';
-                    }
-                }, i * 0.02);
+        this.activeTexts.set(id, lettersForThisBlock);
+    }
+
+    hideText({ id }) {
+        if (!this.activeTexts.has(id)) {
+            return;
+        }
+
+        const lettersToHide = this.activeTexts.get(id);
+
+        lettersToHide.forEach((letter, i) => {
+            gsap.to(letter.scale, {
+                x: 0, y: 0, z: 0,
+                duration: 0.5,
+                ease: 'power3.in',
+                delay: i * 0.02,
+                onComplete: () => {
+                    letter.visible = false;
+                }
             });
         });
-        this.activeLetters = []; // Limpiamos el array de letras activas
+
+        // Liberamos el ID, pero no reseteamos el pool todavía
+        this.activeTexts.delete(id);
+    }
+    
+    // Función para limpiar toda la pantalla
+    hideAll() {
+        for (const id of this.activeTexts.keys()) {
+            this.hideText({ id });
+        }
+        // Reseteamos el puntero para que el pool pueda ser reutilizado desde el principio
+        this.nextAvailableLetterIndex = 0;
     }
 }

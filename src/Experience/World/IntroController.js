@@ -50,7 +50,7 @@ export default class IntroController {
                 y: 0,
              },
             {   z: 94,
-                y: .6,
+                y: .6, //.6
                 duration: 2,
                 ease: 'power1.inOut' }
         );
@@ -87,7 +87,7 @@ export default class IntroController {
             this.logo.pieces.center.forEach(piece => {
                 piece.visible = true
             });
-        }, [], "-=0.8")
+        }, [], "-=1")
 
         .to(centerPositions, { // ✨ Animamos el array de .position
             z: (i) => centerOriginals[i].z, // ✨ Usamos el valor 'z' del original
@@ -127,15 +127,18 @@ export default class IntroController {
         tl.call(() => {
 
                 this.letterManager.showText({
+                    id: 'title1',
                     text: 'INTUITIVE HUMAN',
-                    fontSize: 6, // Ajustamos el tamaño para que coincida con el logo
-                    position: new THREE.Vector3(0, -14, 0) // Centrado con el logo
+                    fontSize: 5,
+                    position: new THREE.Vector3(0, -14, 0)
                 });
 
                 this.letterManager.showText({
+                    id: 'title2',
                     text: 'NEUROTHERAPY',
-                    fontSize: 6, // Ajustamos el tamaño para que coincida con el logo
-                    position: new THREE.Vector3(0, -20, 0) // Centrado con el logo
+                    color: '#ff0000',
+                    fontSize: 5,
+                    position: new THREE.Vector3(0, -20, 0)
                 });
 
             }, null, 3); // El null es para los parámetros, 1 es el tiempo
