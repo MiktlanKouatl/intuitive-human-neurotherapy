@@ -8,6 +8,14 @@ export default class Logo {
     this.resources = this.experience.resources;
     this.theme = this.experience.theme;
 
+    // PREPARAMOS LAS PIEZAS PARA LA ANIMACIÓN DE INTRO
+    this.pieces = {
+        center: [],
+        red: [],
+        blue: [],
+        contorno: null // Una referencia directa a la pieza clave
+    };
+
     // Obtenemos el modelo cargado desde el archivo .glb
     const loadedModel = this.resources.items.logoModel;
 
@@ -16,10 +24,35 @@ export default class Logo {
 
     // 2. Usamos traverse() para encontrar todas las mallas y transferirlas
     loadedModel.scene.traverse((child) => {
-      if (child.isMesh) {
-        this.logoGroup.add(child.clone());
-      }
-    });
+    if (child.isMesh) {
+        // 1. Creamos el clon y lo guardamos en una variable
+        const clone = child.clone();
+
+        // 2. Añadimos el CLON al grupo de la escena
+        this.logoGroup.add(clone);
+
+        // 3. Preparamos y clasificamos el CLON para la animación
+        clone.originalPosition = clone.position.clone(); // Guardamos su posicion
+        
+        
+        if (clone.name === 'ContornoBase') {
+            this.pieces.contorno = clone;
+        } else {
+            // Hacemos el CLON invisible al inicio
+            clone.visible = false;
+            clone.position.z = 10;
+
+            // Clasificamos el CLON en el array correspondiente
+            if (clone.name.includes('Amarillo') || clone.name.includes('Ojos') || clone.name.includes('Plane003')) {
+                this.pieces.center.push(clone);
+            } else if (clone.name.includes('Rojo') || clone.name.includes('Plane017') || clone.name.includes('Antenas')) {
+                this.pieces.red.push(clone);
+            } else if (clone.name.includes('Azul')) {
+                this.pieces.blue.push(clone);
+            }
+        }
+    }
+});
 
     this.createCustomMaterials();
     this.setModelMaterials();
@@ -130,7 +163,7 @@ export default class Logo {
   setModelMaterials() {
     this.logoGroup.traverse((child) => {
       if (child.isMesh) {
-        console.log(child.name);
+        //console.log(child.name);
         // --- ASIGNAMOS LOS MATERIALES PRIMERO ---
         if (child.name === "ContornoBase") {
           child.material = this.materials.blackMat;
@@ -145,7 +178,7 @@ export default class Logo {
           child.name === "Plane017" ||
           child.name === "Plane017_1"
         ) {
-          console.log("rojos verticales ", child.name);
+          //console.log("rojos verticales ", child.name);
           child.material = this.materials.fuchsiaGradientVertical;
         } else if (child.name.includes("Rojo")) {
           child.material = this.materials.fuchsiaGradient;
@@ -259,7 +292,7 @@ export default class Logo {
 
       gsap.to(animationProxy, {
         value: material.animationBounds.end, // Animar hacia su valor final único
-        duration: 1, //Math.random() * 2 + 2, // Duración aleatoria para un efecto más orgánico
+        duration: 1.5, //Math.random() * 2 + 2, // Duración aleatoria para un efecto más orgánico
         ease: "power1.inOut",
         yoyo: true,
         repeat: -1,

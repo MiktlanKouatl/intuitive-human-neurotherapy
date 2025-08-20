@@ -11,7 +11,7 @@ export default class LetterManager {
         
         this.letterPool = [];
         this.activeLetters = [];
-        this.maxLetters = 50; // Cantidad máxima de letras que podemos mostrar a la vez
+        this.maxLetters = 100; // Cantidad máxima de letras que podemos mostrar a la vez
 
         this.preloadLetters();
     }
