@@ -129,20 +129,30 @@ export default class IntroController {
                 this.letterManager.showText({
                     id: 'title1',
                     text: 'INTUITIVE HUMAN',
-                    fontSize: 5,
-                    position: new THREE.Vector3(0, -14, 0)
+                    fontSize: 6,
+                    position: new THREE.Vector3(0, -13, 0),
+                    animation: {
+                        type: 'introReveal', // <-- Solo cambiamos el nombre de la receta
+                        stagger: 0.05,
+                        duration: 1.5 // Podemos ajustar la duración aquí
+                    }
                 });
+            }, null, 3); // El null es para los parámetros, 1 es el tiempo
+        tl.call(() => {
 
                 this.letterManager.showText({
                     id: 'title2',
                     text: 'NEUROTHERAPY',
-                    color: '#ff0000',
-                    fontSize: 5,
-                    position: new THREE.Vector3(0, -20, 0)
+                    fontSize: 6,
+                    position: new THREE.Vector3(0, -19, 0),
+                    animation: {
+                        type: 'introReveal', // <-- Solo cambiamos el nombre de la receta
+                        stagger: 0.05,
+                        duration: 1.5 // Podemos ajustar la duración aquí
+                    }
                 });
+            }, null, 4); // El null es para los parámetros, 4 es el tiempo
 
-            }, null, 3); // El null es para los parámetros, 1 es el tiempo
-        
         // Devolvemos la timeline completa para que StateManager la controle.
         return tl;
     }

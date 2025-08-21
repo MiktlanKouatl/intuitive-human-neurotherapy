@@ -25,7 +25,7 @@ export default class LetterManager {
             letter.text = '';
             letter.anchorX = 'center';
             letter.anchorY = 'middle';
-            letter.material.transparent = false; // Permite animar la opacidad
+            letter.material.transparent = true; // Permite animar la opacidad
             letter.scale.set (1,1,1);
             letter.visible = true;
             
@@ -35,79 +35,136 @@ export default class LetterManager {
         console.log(`LetterManager: ${this.maxLetters} letras pre-cargadas.`);
     }
 
-    // en src/Experience/Utils/LetterManager.js
+    // --- NUESTRO CATÁLOGO DE "RECETAS" DE ANIMACIÓN ---
+
+    _getAnimation(config) {
+        const { type = 'elasticIn' } = config;
+
+        switch (type) {
+            case 'introReveal':
+                // Esta receta ahora acepta un ARRAY de letras
+                return (letters, animConfig) => {
+                    const { stagger = 0.05, duration = 1.0 } = animConfig;
+                    // 1. Preparamos el estado inicial de TODAS las letras
+                    letters.forEach(letter => {
+                        letter.visible = true;
+                        //letter.material.opacity = 0;
+                    });
+                    // Animamos la posición de todas las letras
+                    gsap.from(letters.map(l => l.position), {
+                        z: (i) => letters[i].position.z + 80, // Empiezan 30 unidades más atrás
+                        duration: duration / 2,
+                        ease: 'power2.out(2)',
+                        stagger // GSAP aplica el escalonamiento aquí
+                    });
+
+                    // Animamos la rotación de todas las letras
+                    gsap.from(letters.map(l => l.rotation), {
+                        y: -Math.PI / 2, // Empiezan giradas -90 grados
+                        duration: duration / 2,
+                        ease: 'power2.out(2)',
+                        stagger, // El mismo stagger para sincronizar
+                        delay: duration / 2
+                    });
+
+                    // Animamos la opacidad de todas las letras
+                    /* gsap.to(letters.map(l => l.material), {
+                        opacity: 1,
+                        duration: duration * 0.8,
+                        ease: 'power2.out',
+                        stagger // Y de nuevo aquí
+                    }); */
+                };
+            
+            case 'elasticIn':
+                // La receta elástica, ahora también para un array
+                return (letters, animConfig) => {
+                    const { stagger = 0.05, duration = 1.0 } = animConfig;
+                    
+                    letters.forEach(l => l.visible = true);
+                    
+                    gsap.from(letters.map(l => l.scale), {
+                        x: 0, y: 0, z: 0,
+                        duration,
+                        ease: 'elastic.out(1, 0.5)',
+                        stagger
+                    });
+                };
+
+            default:
+                return (letters, animConfig) => {
+                    const { stagger = 0.05, duration = 1.0 } = animConfig;
+                    letters.forEach(l => l.visible = true);
+                    gsap.from(letters.map(l => l.scale), { x: 0, y: 0, z: 0, duration, stagger });
+                };
+        }
+    }
 
     showText(config) {
-        // 1. CONFIRMAMOS QUE LA LLAMADA Y LA CONFIGURACIÓN LLEGAN BIEN
-        console.log("--- [LetterManager] Iniciando showText ---", config);
-
-        // Extraemos las propiedades con valores por defecto
+        // Extraemos toda la configuración necesaria de config
         const {
             id = 'default',
             text = '',
             fontSize = 1,
-            font = '/fonts/ubuntuBold.ttf', // Asegúrate que esta ruta es correcta
+            font = '/fonts/ubuntuBold.ttf',
             color = this.theme.liveColors.line,
-            position = new THREE.Vector3(0, 0, 0)
+            position = new THREE.Vector3(0, 0, 0),
+            animation = {} // Objeto para la configuración de la animación
         } = config;
-
-        // Si ya existe un texto con este ID, lo ocultamos primero
-        /* if (this.activeTexts.has(id)) {
+        // Si ya existe un texto con este ID, lo ocultamos para actualizarlo
+        if (this.activeTexts.has(id)) {
             this.hideText({ id });
-        } */
+        }
 
         const lettersToShow = text.split('');
         const kerning = fontSize * 0.8;
         const totalWidth = lettersToShow.reduce((width, char) => width + (char === ' ' ? kerning * 0.5 : kerning), 0);
         let currentX = position.x - totalWidth / 2;
+        
         const lettersForThisBlock = [];
+        const syncPromises = []; // Array para guardar las promesas de cada .sync()
 
-        console.log(`[${id}] -> Mostrando texto: "${text}"`); // 2. VERIFICAMOS EL TEXTO A PROCESAR
-
-        for (let i = 0; i < lettersToShow.length; i++) {
-            const char = lettersToShow[i];
+        // Recorremos las letras para configurarlas y preparar las promesas de sincronización
+        for (const char of lettersToShow) {
             if (char === ' ') {
                 currentX += kerning * 0.5;
                 continue;
             }
 
             if (this.nextAvailableLetterIndex >= this.letterPool.length) {
-                console.warn("LetterManager: No hay más letras pre-cargadas.");
+                console.warn("LetterManager: Pool de letras agotado.");
                 break;
             }
             
             const letter = this.letterPool[this.nextAvailableLetterIndex];
             this.nextAvailableLetterIndex++;
 
-            // 3. VERIFICAMOS QUE ESTAMOS CONFIGURANDO LA LETRA
-            console.log(`[${id} - ${char}] -> Configurando letra #${i} del pool.`);
-
+            // Configuramos la letra con sus propiedades
             letter.text = char;
             letter.fontSize = fontSize;
             letter.color = color;
             letter.font = font;
             letter.position.set(currentX, position.y, position.z);
             
-            // 4. EL PUNTO MÁS CRÍTICO: El callback de .sync()
-            console.log(`[${id} - ${char}] -> Llamando a .sync()`);
-            letter.sync(() => {
-                // SI NO VES ESTE MENSAJE EN LA CONSOLA, EL PROBLEMA ESTÁ EN LA CARGA DE LA FUENTE
-                console.log(`%c[${id} - ${char}] -> ¡CALLBACK DE SYNC EJECUTADO!`, 'color: lightgreen; font-weight: bold;');
-
-                letter.visible = true;
-                gsap.from(letter.position, {
-                    y: letter.position.y - 3, z: 0,
-                    duration: 1.0,
-                    ease: 'back.out(3)',
-                    delay: i * 0.05
-                });
-            });
-
             lettersForThisBlock.push(letter);
+
+            // Creamos una promesa para cada .sync() y la guardamos
+            syncPromises.push(new Promise(resolve => letter.sync(resolve)));
+            
             currentX += kerning;
         }
 
+        // Guardamos las letras en nuestro Map para poder controlarlas después
         this.activeTexts.set(id, lettersForThisBlock);
+
+        // Esperamos a que TODAS las letras estén listas (sincronizadas)
+        Promise.all(syncPromises).then(() => {
+            // Obtenemos la "receta" de la animación que vamos a usar
+            const animationFunction = this._getAnimation(animation);
+            
+            // Ejecutamos UNA SOLA animación sobre el ARRAY completo de letras
+            animationFunction(lettersForThisBlock, animation);
+        });
     }
 
     hideText({ id }) {
@@ -140,5 +197,39 @@ export default class LetterManager {
         }
         // Reseteamos el puntero para que el pool pueda ser reutilizado desde el principio
         this.nextAvailableLetterIndex = 0;
+    }
+    // --- FUNCIÓN PARA LA TRANSICIÓN DE SALIDA ---
+    transformTextToPoints({ id, targetPoints, onComplete = () => {} }) {
+        if (!this.activeTexts.has(id)) {
+            console.warn(`LetterManager: No se encontró texto con el id "${id}".`);
+            return;
+        }
+
+        const lettersToTransform = this.activeTexts.get(id);
+        const tl = gsap.timeline({ onComplete });
+
+        // Fase 1: Transformar cada letra en una línea vertical
+        tl.to(lettersToTransform.map(l => l.scale), {
+            x: 0.05, // Muy delgada
+            z: 0.05, // Muy delgada
+            y: 1.2,  // Ligeramente más alta
+            duration: 0.7,
+            ease: 'power3.in',
+            stagger: 0.03
+        });
+
+        // Fase 2: Mover cada línea a su punto de destino
+        lettersToTransform.forEach((letter, i) => {
+            // Aseguramos que haya un punto de destino para cada letra
+            const targetPoint = targetPoints[i % targetPoints.length];
+            
+            tl.to(letter.position, {
+                x: targetPoint.x,
+                y: targetPoint.y,
+                z: targetPoint.z,
+                duration: 1.5,
+                ease: 'power2.inOut'
+            }, `-=${0.7 - i * 0.02}`); // Solapamos las animaciones para un efecto fluido
+        });
     }
 }
