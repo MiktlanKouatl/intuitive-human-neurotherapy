@@ -25,8 +25,9 @@ export default class LetterManager {
             letter.text = '';
             letter.anchorX = 'center';
             letter.anchorY = 'middle';
-            letter.material.transparent = true; // Permite animar la opacidad
+            letter.material.transparent = false; // Permite animar la opacidad
             letter.scale.set (1,1,1);
+            letter.extrusion = 30;
             letter.visible = true;
             
             this.letterPool.push(letter);
@@ -35,7 +36,7 @@ export default class LetterManager {
         console.log(`LetterManager: ${this.maxLetters} letras pre-cargadas.`);
     }
 
-    // --- NUESTRO CATÁLOGO DE "RECETAS" DE ANIMACIÓN ---
+    // --- CATÁLOGO DE "RECETAS" DE ANIMACIÓN DE ENTRADA ---
 
     _getAnimation(config) {
         const { type = 'elasticIn' } = config;
@@ -96,6 +97,53 @@ export default class LetterManager {
                     const { stagger = 0.05, duration = 1.0 } = animConfig;
                     letters.forEach(l => l.visible = true);
                     gsap.from(letters.map(l => l.scale), { x: 0, y: 0, z: 0, duration, stagger });
+                };
+        }
+    }
+    /// CATÁLOGO DE "RECETAS" DE ANIMACIÓN DE SALIDA ---
+    _getExitAnimation(config) {
+        const { type = 'simpleFadeOut' } = config;
+
+        switch (type) {
+            case 'transformToPoints':
+                return (letters, animConfig) => {
+                    const { targets = [], onComplete = () => {} } = animConfig;
+                    const tl = gsap.timeline({ onComplete });
+
+                    // Fase 1: Transformar cada letra en una línea vertical
+                    tl.to(letters.map(l => l.scale), {
+                        x: 0.05, // Muy delgada
+                        z: 0.05, // Muy delgada
+                        y: 1.2,  // Ligeramente más alta
+                        duration: 0.7,
+                        ease: 'power3.in',
+                        stagger: 0.03
+                    });
+
+                    // Fase 2: Mover cada línea a su punto de destino
+                    // Usamos un solo .to() con stagger para un control perfecto
+                    tl.to(letters.map(l => l.position), {
+                        x: (i) => targets[i % targets.length].x,
+                        y: (i) => targets[i % targets.length].y,
+                        z: (i) => targets[i % targets.length].z,
+                        duration: 1.5,
+                        ease: 'power2.inOut',
+                        stagger: 0.02 // Un stagger muy rápido para el efecto de "enjambre"
+                    }, "<0.2"); // Empezar 0.2s después del inicio de la animación anterior
+
+                    return tl;
+                };
+
+            case 'simpleFadeOut':
+            default:
+                return (letters, animConfig) => {
+                    const { onComplete = () => {} } = animConfig;
+                    return gsap.to(letters.map(l => l.material), {
+                        opacity: 0,
+                        duration: 0.5,
+                        stagger: 0.02,
+                        onComplete
+                    });
                 };
         }
     }
@@ -167,26 +215,20 @@ export default class LetterManager {
         });
     }
 
-    hideText({ id }) {
+    hideText(config) {
+        const { id, animation = {} } = config;
+
         if (!this.activeTexts.has(id)) {
+            console.warn(`LetterManager: No se encontró texto con el id "${id}".`);
             return;
         }
 
         const lettersToHide = this.activeTexts.get(id);
+        
+        // Obtenemos y ejecutamos la función de animación de salida
+        const exitAnimationFunction = this._getExitAnimation(animation);
+        exitAnimationFunction(lettersToHide, animation);
 
-        lettersToHide.forEach((letter, i) => {
-            gsap.to(letter.scale, {
-                x: 0, y: 0, z: 0,
-                duration: 0.5,
-                ease: 'power3.in',
-                delay: i * 0.02,
-                onComplete: () => {
-                    letter.visible = false;
-                }
-            });
-        });
-
-        // Liberamos el ID, pero no reseteamos el pool todavía
         this.activeTexts.delete(id);
     }
     
